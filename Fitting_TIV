@@ -1,0 +1,148 @@
+%%
+clc
+clear 
+close all
+
+%%
+
+
+Tb = readtable('ViralLoadData.xls','sheet','TX91');
+Days = Tb{1:5,{'Day'}};
+Viral_load = Tb{1:5,{'Y'}};  
+transform_pool_viral_load = log(Viral_load);
+
+
+%%
+unknown0 = [3e-8,10,3,3];
+lb = [0,0,2.6,2];
+ub = [1e-5,100,6.1,5]; 
+options = optimoptions('lsqcurvefit','Algorithm','trust-region-reflective','OptimalityTolerance',1e-20);
+problem = createOptimProblem('lsqcurvefit',...
+                             'objective', @Fit,...
+                             'xdata', Days,...
+                             'ydata', transform_pool_viral_load,...
+                             'x0',unknown0,...
+                             'lb', lb,...
+                             'ub', ub,...
+                             'options',options);
+
+
+gs = GlobalSearch('FunctionTolerance',1e-6,'NumTrialPoints',2000);
+ms = MultiStart(gs);
+rng(20213009)
+[unknown,fval,exitflag,output,solutions] = run(ms,problem,50);
+
+
+
+
+
+
+
+%% Model simulation using estimated parameter values 
+                
+unknown = parameter_TX91;
+                          
+beta = unknown(1);  % viral infectivity
+p = unknown(2);%2.2e-3; % viral replication rate    
+delta_I = unknown(3); %2.1; % decay rate of infected cells 
+c = unknown(4); %1; % natural decay rate of virus 
+
+%phi = 0.33;
+%xi = 2.6;
+%kappa_F = 1;
+%q_F = 1e-5;
+%delta_F = 1;
+%
+% time setting of viral infection
+t0_inf = 0;
+t_end_inf = 15; % consider 15 days post inoculation of virus
+report_point_inf = (t_end_inf - t0_inf) * 24 + 1;
+report_time_inf = linspace(t0_inf, t_end_inf, report_point_inf);
+len_inf = length(report_time_inf);
+
+% Viral Variables 
+
+T = zeros(1,len_inf);
+I = zeros(1,len_inf);
+V = zeros(1,len_inf);
+%F = zeros(1,len_inf);
+%R = zeros(1,len_inf);
+
+T0 = 7e+7;
+I0 = 0;
+V0 = 1;
+%F0 = 0;
+%R0 = 0;
+
+
+T(1) = T0;
+I(1) = I0;
+V(1) = V0;
+%F(1) = F0;
+%R(1) = R0;
+
+init_inf = [T0,I0,V0]';
+
+[~,y_inf] = ode15s(@TIV_model, report_time_inf, init_inf, options,...
+                       beta,p,delta_I,c); 
+
+                   
+figure(33)                   
+semilogy(report_time_inf, y_inf(:,3),'LineWidth',2)
+hold on 
+ylim([1e-1,1e+10])
+ylabel('Viral load (fold change)')
+xlabel('Days post infection')
+legend('1918','SP83','Thai16','TX91')
+set(gca, 'ycolor','k')
+            
+
+%%
+figure(5)
+semilogy(Days, Viral_load,'ko','LineWidth',1.5)
+hold on 
+semilogy(report_time_inf, y_inf(:,3),'b','LineWidth',2)
+ylim([1e-1,1e+10])
+ylabel('Viral load (fold change)')
+xlabel('Days post infection')
+set(gca, 'ycolor','k')
+%legend('Data','Fit \beta','Fit \beta and \kappa','Fit \kappa','Fit \kappa and c','Fit \beta, \kappa and c','Fit \beta and c')
+hold off
+
+
+%% 
+
+figure(1)
+plot(report_time_inf, y_inf(:,1))
+
+
+%%
+
+parameter_Thai16 = unknown;
+%%
+
+writematrix(parameter_Thai16,'parameter_Thai16.xls')
+writematrix(parameter_SP83,'parameter_SP83.xls')
+writematrix(parameter_TX91,'parameter_TX91.xls')
+writematrix(parameter_1918,'parameter_1918.xls')
+
+
+
+%% detailed contribution of each components on the right-hand side of dV/dt to viral replication (Fig.3b in the main text of the paper)
+V_Growth = p*y_inf(:,5);
+V_Natural = c*y_inf(:,6);
+V_Macrophage = kappa * y_inf(:,6) .* y_inf(:,2);
+V_Abs = kappa_a * y_inf(:,6) .* y_inf(:,7);
+
+figure(4)
+semilogy(report_time_inf, V_Growth,'k','LineWidth',1.5) % Viral Growth
+hold on
+semilogy(report_time_inf, V_Natural, 'k:', 'LineWidth',1.5) % viral natural decay
+semilogy(report_time_inf, V_Macrophage, 'k-.', 'LineWidth',1.5) % viral decay by M1
+semilogy(report_time_inf, V_Abs, 'k--', 'LineWidth',1.5) % viral decay by Abs
+ylim([1e+0,1e+10])
+hold off
+ylabel('Viral dynamical rate ([u_v]/day)')
+xlabel('Days post infection (p.i.)')
+legend('viral growth','natural decay','engulfed by M1','killed by Abs','FontSize',18)
+set(gca,'YTick',[0.01,1,100,10000,1000000,100000000],'FontSize',23)
