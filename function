@@ -1,0 +1,56 @@
+function  var = Macrophage_infection_S2(~,y,...
+                       s_M, delta_MR,...
+                       s_V, k1, k2, alpha1,D_50, k_m1, k_m2,V50_M,...
+                       delta_M1,delta_M2, q_prime,kappa_T,k21,...
+                       g_T,T_max,beta,beta_prime,phi,xi_R,delta_I,kappa_F,kappa_E,...
+                       p_I,p_M,delta_V,kappa_MV,kappa_AS,...
+                       q_FI,s_F,q_FM,delta_F,kappa_D,delta_D,...
+                       gamma_E,V_50E,n_E,tau_E,phi_E,delta_E,...
+                       gamma_B,V_50B,n_B,tau_B,phi_p,delta_p,mu_AS,delta_AS)
+            
+n_total = 11+n_E+n_B+3;
+var = zeros(n_total,1);
+
+var(1) = s_M - delta_MR * y(1) - k1 * (y(6)/(y(6) + V50_M)) * ( 1/(1 + alpha1 * y(3) * delta_MR/s_M) ) * y(1) - k2 * ( y(9)/(y(9) + D_50) ) * y(2) * y(1) + k_m1 * y(2) + k_m2 * y(3);
+var(2) = s_V * y(2) * (y(6)/(y(6) + V50_M)) + k1 * (y(6)/(y(6) + V50_M)) * ( 1/(1 + alpha1 * y(3) * delta_MR/s_M) ) * y(1) - delta_M1 * y(2) - k_m1 * y(2) + k21 * (y(6)/(y(6) + V50_M)) * y(3);
+var(3) = k2 * ( y(9)/(y(9) + D_50) ) * y(2) * y(1) - delta_M2 * y(3) - k_m2 * y(3) - k21 * (y(6)/(y(6) + V50_M)) * y(3);
+
+var(4) = g_T*(y(4)+y(8))*(1-(y(4)+y(5)+y(8))/T_max) - beta*y(4)*y(6) - phi*y(7)*y(4) + xi_R*y(8) - kappa_T*y(4)*y(2); % T
+var(5) = beta*y(4)*y(6) - delta_I*y(5)  - kappa_E*y(5)*y(12+n_E-1) - kappa_F*y(5)*y(7); % I
+var(6) = p_I*y(5)/(1+s_F*y(7)) + p_M*y(2) - delta_V*y(6) - beta_prime*y(4)*y(6) - q_prime*y(1)*y(6) - kappa_MV*y(2)*y(6) - kappa_AS*y(6)*y(12+n_E+n_B+2); % V
+
+var(7) = q_FI*y(5) + q_FM*y(2) - delta_F*y(7); % F
+var(8) = phi*y(7)*y(4) - xi_R*y(8); % R
+var(9) = delta_I*y(5)  + kappa_E*y(5)*y(12+n_E-1) + kappa_F*y(5)*y(7) + kappa_T*y(4)*y(2) - kappa_D*y(2)*y(9) - delta_D*y(9); % D
+
+
+var(10) = -gamma_E * y(6) / (y(6) + V_50E) * y(10); % E0
+
+var(11) = gamma_E * y(6) / (y(6) + V_50E) * y(10) -  n_E/tau_E * y(11); % E1 
+
+for i = 12 : 12+n_E-2
+    
+    var(i) = n_E/tau_E * (y(i-1) - y(i));
+    
+end 
+var(12+n_E-1) = phi_E * n_E/tau_E * y(12+n_E-2) - delta_E * y(12+n_E-1); % E
+
+
+
+var(12+n_E) = -gamma_B * y(6) / (y(6) + V_50B) * y(12+n_E); % B0
+
+var(12+n_E+1) = gamma_B * y(6) / (y(6) + V_50B) * y(12+n_E) -  n_B/tau_B * y(12+n_E+1); % B1
+
+for j = 12+n_E+2 : 12+n_E+2+n_B-2 % B2...B_{n_B}
+    
+    var(j) = n_B/tau_B * (y(j-1) - y(j));
+    
+end 
+
+var(12+n_E+n_B+1) = phi_p * n_B/tau_B *  y(12+n_E+2+n_B-2) - delta_p * y(12+n_E+n_B+1); % P
+var(12+n_E+n_B+2) = mu_AS * y(12+n_E+n_B+1) - delta_AS * y(12+n_E+n_B+2); % A_S
+end 
+
+
+
+
