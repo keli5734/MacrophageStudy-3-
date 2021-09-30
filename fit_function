@@ -1,0 +1,38 @@
+
+
+function S = Fit(unknown,t, ~)
+Initial_condition = [7e+7,0,1]';
+
+[T,y_inf] = ode15s(@fun_inf_lambda,t,Initial_condition);
+    
+    function var = fun_inf_lambda(~,y)
+        
+       
+        %beta = 1.3e-4;
+        %p = 2.2e-3;
+        %c = 3;
+        %delta_I = 4;
+        %phi = 0.33;
+        %xi = 2.6;
+        %kappa_F = 1;
+        %q_F = 1e-5;
+        %delta_F = 1;
+ 
+        
+        ydot = zeros(3,1);
+        
+
+        ydot(1) = - unknown(1) * y(1) * y(3); %T
+        ydot(2) = unknown(1) * y(1) * y(3) - unknown(3) * y(2); %I
+        ydot(3) = unknown(2) * y(2) - unknown(4) * y(3); %V
+        %ydot(4) = q_F*y(2) - delta_F*y(4); % F
+        %ydot(5) = phi*y(1)*y(4)-xi*y(5); % R
+
+        var = ydot;
+    end 
+%This is pool data
+S = log(y_inf(:,3));
+
+%This is individual data
+%S = log(y_inf(:,6));
+end 
