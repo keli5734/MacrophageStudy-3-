@@ -1,0 +1,11 @@
+function  var = TIV_model(~,y,beta,p,delta_I,c)
+                         
+
+var = zeros(3,1);
+
+var(1) =  -beta*y(1)*y(3);%-phi*y(1)*y(4)+xi*y(5);
+var(2) =  beta*y(1)*y(3) - delta_I*y(2);% - kappa_F*y(2)*y(4);
+var(3) =  p*y(2) - c*y(3);
+%var(4) =  q_F*y(2) - delta_F*y(4);
+%var(5) =  phi*y(1)*y(4)-xi*y(5);
+end 
